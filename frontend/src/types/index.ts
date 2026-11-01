@@ -60,11 +60,46 @@ export interface DocumentItem {
   updatedAt: string;
   owner?: { id: string; fullName: string; email: string };
   folder?: { id: string; name: string };
+  permission?: PermissionLevel;
+  sharedBy?: { id: string; fullName: string; email: string; avatarUrl?: string | null } | null;
+  collaborator?: { id: string; fullName: string; email: string; avatarUrl?: string | null } | null;
+  invitationStatus?: 'PENDING' | 'ACCEPTED';
+  shareSource?: 'document' | 'folder';
+}
+
+export interface CollaborationInvitation {
+  id: string;
+  permission: PermissionLevel;
+  expiresAt: string;
+  createdAt: string;
+  invitedBy: { id: string; fullName: string; email: string; avatarUrl?: string | null };
+  document?: { id: string; name: string } | null;
+  folder?: { id: string; name: string } | null;
+}
+
+export interface CollaborationNotification {
+  id: string;
+  type: 'COLLABORATION_INVITATION' | 'PERMISSION_CHANGED' | 'ACCESS_REVOKED' | 'INVITATION_RESPONSE';
+  message: string;
+  readAt?: string | null;
+  createdAt: string;
 }
 
 export interface ActivityLogItem {
   id: string;
-  action: 'VIEWED' | 'EDITED' | 'SHARED' | 'DOWNLOADED' | 'DELETED' | 'RESTORED' | 'VERSION_RESTORED';
+  action:
+    | 'VIEWED'
+    | 'EDITED'
+    | 'SHARED'
+    | 'DOWNLOADED'
+    | 'DELETED'
+    | 'RESTORED'
+    | 'VERSION_RESTORED'
+    | 'COLLABORATOR_INVITED'
+    | 'INVITATION_ACCEPTED'
+    | 'INVITATION_REJECTED'
+    | 'PERMISSION_CHANGED'
+    | 'ACCESS_REVOKED';
   createdAt: string;
   user: { id: string; fullName: string; email: string };
   document?: { id: string; name: string };

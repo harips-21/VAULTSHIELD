@@ -56,9 +56,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     }
 
     try {
-      await api.post(`/documents/${document.id}/versions`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post(`/documents/${document.id}/versions`, formData);
       setNewVersionFile(null);
       setChangeSummary('');
       fetchVersions();

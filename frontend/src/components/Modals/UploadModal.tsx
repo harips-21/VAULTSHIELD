@@ -1,5 +1,5 @@
 import { Lock, Tag, UploadCloud, X } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 
 interface UploadModalProps {
@@ -23,6 +23,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFile(null);
+      setTagsInput('');
+      setProgress(0);
+      setError('');
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -39,6 +49,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const handleUpload = async () => {
     if (!file) {
       setError('Please select a file to upload');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setError('File is too large. The maximum upload size is 50 MB.');
       return;
     }
 
@@ -62,7 +76,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
     try {
       await api.post('/documents/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || file.size));
           setProgress(percent);
@@ -72,7 +85,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       onUploadSuccess();
       onClose();
     } catch (e: any) {
-      setError(e.response?.data?.error || 'Upload failed');
+      const status = e.response?.status;
+      setError(
+        status === 413
+          ? 'File is too large. The maximum upload size is 50 MB.'
+          : e.response?.data?.error || 'Upload failed. Check your connection and try again.'
+      );
     } finally {
       setIsUploading(false);
     }
@@ -107,7 +125,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Upload Encrypted Document</h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Files are client-stream encrypted with AES-256 before storage.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Files are encrypted by the server with AES-256-GCM before storage.</p>
           </div>
           <button onClick={onClose} style={{ color: 'var(--text-muted)' }}>
             <X size={20} />

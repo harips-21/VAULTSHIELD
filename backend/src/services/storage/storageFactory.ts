@@ -4,8 +4,7 @@ import { LocalStorageProvider } from './LocalStorageProvider';
 
 export function getStorageProvider(): IStorageProvider {
   if (env.STORAGE_PROVIDER === 's3') {
-    // S3 provider can be hooked up here
-    return new LocalStorageProvider();
+    throw new Error('S3 storage is not implemented; set STORAGE_PROVIDER=local.');
   }
   return new LocalStorageProvider();
 }

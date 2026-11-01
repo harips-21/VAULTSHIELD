@@ -8,6 +8,7 @@ export class ShareService {
    */
   static async shareDocument(params: {
     documentId: string;
+    createdByUserId?: string;
     sharedWithUserId?: string;
     permission: 'OWNER' | 'EDITOR' | 'VIEWER';
     isPublicLink?: boolean;
@@ -34,6 +35,7 @@ export class ShareService {
         shareToken,
         passwordHash,
         expiresAt,
+        createdByUserId: params.createdByUserId,
       },
       include: {
         sharedWith: {
@@ -48,6 +50,7 @@ export class ShareService {
    */
   static async shareFolder(params: {
     folderId: string;
+    createdByUserId?: string;
     sharedWithUserId?: string;
     permission: 'EDITOR' | 'VIEWER';
     isPublicLink?: boolean;
@@ -74,6 +77,7 @@ export class ShareService {
         shareToken,
         passwordHash,
         expiresAt,
+        createdByUserId: params.createdByUserId,
       },
       include: {
         sharedWith: {
@@ -153,7 +157,12 @@ export class ShareService {
     const document = await prisma.document.findUnique({
       where: { id: documentId },
       include: {
-        shares: { where: { sharedWithUserId: userId } },
+        shares: {
+          where: {
+            sharedWithUserId: userId,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          },
+        },
         organization: {
           include: { memberships: { where: { userId } } },
         },
@@ -174,20 +183,34 @@ export class ShareService {
     // 3. Direct Document Shares
     const directShare = document.shares[0];
     if (directShare) {
-      return directShare.permission as any;
+      return directShare.permission;
     }
+
+    const documentRevocation = await prisma.collaboratorRevocation.findFirst({
+      where: { documentId, userId },
+    });
+    if (documentRevocation) return 'NONE';
 
     // 4. Inherited Folder Shares (if inside a folder)
     if (document.folderId) {
       let currentFolderId: string | null = document.folderId;
       while (currentFolderId) {
         const folderShare = await prisma.folderShare.findFirst({
-          where: { folderId: currentFolderId, sharedWithUserId: userId },
+          where: {
+            folderId: currentFolderId,
+            sharedWithUserId: userId,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          },
         });
 
         if (folderShare) {
-          return folderShare.permission as any;
+          return folderShare.permission;
         }
+
+        const folderRevocation = await prisma.collaboratorRevocation.findFirst({
+          where: { folderId: currentFolderId, userId },
+        });
+        if (folderRevocation) return 'NONE';
 
         const parent: { parentFolderId: string | null } | null = await prisma.folder.findUnique({
           where: { id: currentFolderId },
@@ -197,6 +220,8 @@ export class ShareService {
         currentFolderId = parent?.parentFolderId || null;
       }
     }
+
+    if (!orgMembership) return 'NONE';
 
     // 5. Default Organization Member View Access if not trashed
     if (orgMembership) {

@@ -17,6 +17,16 @@ export class DocumentService {
     folderId?: string;
     tags?: string[];
   }) {
+    if (params.folderId) {
+      const folder = await prisma.folder.findUnique({
+        where: { id: params.folderId },
+        select: { organizationId: true, isTrashed: true },
+      });
+      if (!folder || folder.organizationId !== params.organizationId || folder.isTrashed) {
+        throw new Error('Destination folder not found or invalid');
+      }
+    }
+
     const storageProvider = getStorageProvider();
     const fileSize = BigInt(params.buffer.length);
 
@@ -31,39 +41,42 @@ export class DocumentService {
     await storageProvider.write(relativeStoragePath, envelope.encryptedBuffer);
 
     // Create document & version 1 in Prisma
-    const document = await prisma.$transaction(async (tx) => {
-      const doc = await tx.document.create({
-        data: {
-          id: docId,
-          name: params.name,
-          mimeType: params.mimeType,
-          fileSize,
-          organizationId: params.organizationId,
-          folderId: params.folderId || null,
-          ownerId: params.ownerId,
-          tags: params.tags || [],
-          currentVersionId: versionId,
-        },
-      });
+    const document = await prisma.$transaction(
+      async (tx) => {
+        const doc = await tx.document.create({
+          data: {
+            id: docId,
+            name: params.name,
+            mimeType: params.mimeType,
+            fileSize,
+            organizationId: params.organizationId,
+            folderId: params.folderId || null,
+            ownerId: params.ownerId,
+            tags: params.tags || [],
+            currentVersionId: versionId,
+          },
+        });
 
-      await tx.documentVersion.create({
-        data: {
-          id: versionId,
-          documentId: doc.id,
-          versionNumber: 1,
-          storagePath: relativeStoragePath,
-          checksumSha256: envelope.checksumSha256,
-          fileSize,
-          encryptedDek: envelope.encryptedDek,
-          iv: envelope.iv,
-          authTag: envelope.authTag,
-          uploadedByUserId: params.ownerId,
-          changeSummary: 'Initial upload',
-        },
-      });
+        await tx.documentVersion.create({
+          data: {
+            id: versionId,
+            documentId: doc.id,
+            versionNumber: 1,
+            storagePath: relativeStoragePath,
+            checksumSha256: envelope.checksumSha256,
+            fileSize,
+            encryptedDek: envelope.encryptedDek,
+            iv: envelope.iv,
+            authTag: envelope.authTag,
+            uploadedByUserId: params.ownerId,
+            changeSummary: 'Initial upload',
+          },
+        });
 
-      return doc;
-    });
+        return doc;
+      },
+      { timeout: 30_000 }
+    );
 
     return document;
   }
@@ -125,8 +138,9 @@ export class DocumentService {
       isTrashed: params.isTrashed ?? false,
     };
 
+    // Handle folderId filtering: empty string means root level
     if (params.folderId !== undefined) {
-      whereClause.folderId = params.folderId;
+      whereClause.folderId = params.folderId === "" ? null : params.folderId;
     }
 
     if (params.search) {
@@ -157,6 +171,24 @@ export class DocumentService {
   }
 
   static async moveDocument(documentId: string, newFolderId: string | null) {
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
+      select: { organizationId: true },
+    });
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    if (newFolderId) {
+      const folder = await prisma.folder.findUnique({
+        where: { id: newFolderId },
+        select: { organizationId: true, isTrashed: true },
+      });
+      if (!folder || folder.organizationId !== document.organizationId || folder.isTrashed) {
+        throw new Error('Destination folder not found or invalid');
+      }
+    }
+
     return prisma.document.update({
       where: { id: documentId },
       data: { folderId: newFolderId },

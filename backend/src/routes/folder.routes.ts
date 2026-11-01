@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { FolderController } from '../controllers/folder.controller';
 import { authenticateJWT } from '../middleware/auth.middleware';
+import { requireOrganizationMembership } from '../middleware/organization.middleware';
 
 const router = Router();
 
-router.use(authenticateJWT);
+router.use(authenticateJWT, requireOrganizationMembership('folder'));
 
 router.get('/', FolderController.getFolders);
 router.get('/tree', FolderController.getFolderTree);

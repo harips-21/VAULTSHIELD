@@ -88,7 +88,7 @@ export class FolderController {
       const { folderId } = req.params;
       const { name } = req.body;
 
-      const folder = await FolderService.renameFolder(folderId, name);
+      const folder = await FolderService.renameFolder(folderId, name, req.user!.orgId!);
       return res.status(200).json(folder);
     } catch (e: any) {
       return res.status(400).json({ error: e.message });
@@ -119,7 +119,7 @@ export class FolderController {
     try {
       const { folderId } = req.params;
 
-      await FolderService.restoreFolder(folderId);
+      await FolderService.restoreFolder(folderId, req.user?.orgId || '');
 
       await ActivityService.log({
         organizationId: req.user?.orgId || '',

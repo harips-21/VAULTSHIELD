@@ -77,12 +77,28 @@ export class FolderService {
   }
 
   static async moveFolder(folderId: string, newParentFolderId: string | null, organizationId: string) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { organizationId: true },
+    });
+    if (!folder || folder.organizationId !== organizationId) {
+      throw new Error('Folder not found');
+    }
+
     // Prevent moving folder into itself or its own subfolder
     if (newParentFolderId === folderId) {
       throw new Error('Cannot move folder into itself');
     }
 
     if (newParentFolderId) {
+      const newParent = await prisma.folder.findUnique({
+        where: { id: newParentFolderId },
+        select: { organizationId: true, isTrashed: true, parentFolderId: true },
+      });
+      if (!newParent || newParent.organizationId !== organizationId || newParent.isTrashed) {
+        throw new Error('Destination folder not found or invalid');
+      }
+
       let currentId: string | null = newParentFolderId;
       while (currentId) {
         if (currentId === folderId) {
@@ -103,21 +119,29 @@ export class FolderService {
   }
 
   static async softDeleteFolder(folderId: string, organizationId: string) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { organizationId: true },
+    });
+    if (!folder || folder.organizationId !== organizationId) {
+      throw new Error('Folder not found');
+    }
+
     const now = new Date();
     // Recursively soft-delete child folders & documents
     const softDeleteRecursive = async (fId: string) => {
-      await prisma.folder.update({
-        where: { id: fId },
+      await prisma.folder.updateMany({
+        where: { id: fId, organizationId },
         data: { isTrashed: true, trashedAt: now },
       });
 
       await prisma.document.updateMany({
-        where: { folderId: fId },
+        where: { folderId: fId, organizationId },
         data: { isTrashed: true, trashedAt: now },
       });
 
       const children = await prisma.folder.findMany({
-        where: { parentFolderId: fId },
+        where: { parentFolderId: fId, organizationId },
         select: { id: true },
       });
 
@@ -129,20 +153,28 @@ export class FolderService {
     await softDeleteRecursive(folderId);
   }
 
-  static async restoreFolder(folderId: string) {
+  static async restoreFolder(folderId: string, organizationId: string) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { organizationId: true },
+    });
+    if (!folder || folder.organizationId !== organizationId) {
+      throw new Error('Folder not found');
+    }
+
     const restoreRecursive = async (fId: string) => {
-      await prisma.folder.update({
-        where: { id: fId },
+      await prisma.folder.updateMany({
+        where: { id: fId, organizationId },
         data: { isTrashed: false, trashedAt: null },
       });
 
       await prisma.document.updateMany({
-        where: { folderId: fId },
+        where: { folderId: fId, organizationId },
         data: { isTrashed: false, trashedAt: null },
       });
 
       const children = await prisma.folder.findMany({
-        where: { parentFolderId: fId },
+        where: { parentFolderId: fId, organizationId },
         select: { id: true },
       });
 
@@ -154,7 +186,15 @@ export class FolderService {
     await restoreRecursive(folderId);
   }
 
-  static async renameFolder(folderId: string, name: string) {
+  static async renameFolder(folderId: string, name: string, organizationId: string) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { organizationId: true },
+    });
+    if (!folder || folder.organizationId !== organizationId) {
+      throw new Error('Folder not found');
+    }
+
     return prisma.folder.update({
       where: { id: folderId },
       data: { name },

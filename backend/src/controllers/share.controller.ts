@@ -10,6 +10,7 @@ export class ShareController {
 
       const share = await ShareService.shareDocument({
         documentId,
+        createdByUserId: req.user!.userId,
         sharedWithUserId,
         permission,
         isPublicLink,
@@ -37,6 +38,7 @@ export class ShareController {
 
       const share = await ShareService.shareFolder({
         folderId,
+        createdByUserId: req.user!.userId,
         sharedWithUserId,
         permission,
         isPublicLink,

@@ -14,6 +14,38 @@ import versionRoutes from './routes/version.routes';
 
 const app = express();
 
+const sanitizeForJson = (value: any): any => {
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(sanitizeForJson);
+  }
+
+  if (value && typeof value === 'object') {
+    if (Buffer.isBuffer(value)) {
+      return value.toString('base64');
+    }
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, sanitizeForJson(item)])
+    );
+  }
+
+  return value;
+};
+
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = ((body: any) => originalJson(sanitizeForJson(body))) as typeof res.json;
+  next();
+});
+
 app.use(helmet());
 app.use(
   cors({

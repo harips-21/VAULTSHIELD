@@ -14,6 +14,7 @@ import {
   Share2,
   Tag,
   Trash2,
+  Users,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { DocumentItem, Folder as FolderType } from '../../types';
@@ -21,9 +22,12 @@ import { DocumentItem, Folder as FolderType } from '../../types';
 interface FileItemProps {
   item: { type: 'folder'; data: FolderType } | { type: 'document'; data: DocumentItem };
   onOpenFolder?: (folderId: string) => void;
+  onOpenDocument?: (document: DocumentItem) => void;
   onDownload?: (docId: string) => void;
+  onRename?: (docId: string) => void;
   onOpenVersions?: (doc: DocumentItem) => void;
   onOpenShare?: (item: any) => void;
+  onOpenCollaborators?: (item: any) => void;
   onOpenComments?: (doc: DocumentItem) => void;
   onDelete?: (id: string, type: 'folder' | 'document') => void;
   onRestore?: (id: string, type: 'folder' | 'document') => void;
@@ -34,9 +38,12 @@ interface FileItemProps {
 export const FileItem: React.FC<FileItemProps> = ({
   item,
   onOpenFolder,
+  onOpenDocument,
   onDownload,
+  onRename,
   onOpenVersions,
   onOpenShare,
+  onOpenCollaborators,
   onOpenComments,
   onDelete,
   onRestore,
@@ -67,7 +74,14 @@ export const FileItem: React.FC<FileItemProps> = ({
 
   return (
     <div
-      onClick={() => isFolder && !isTrashed && onOpenFolder?.(data.id)}
+      onClick={() => {
+        if (isTrashed) return;
+        if (isFolder) {
+          onOpenFolder?.(data.id);
+        } else {
+          onOpenDocument?.(data as DocumentItem);
+        }
+      }}
       style={{
         background: 'var(--bg-secondary)',
         border: '1px solid var(--border-color)',
@@ -76,7 +90,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        cursor: isFolder ? 'pointer' : 'default',
+        cursor: isFolder || (!isTrashed && onOpenDocument) ? 'pointer' : 'default',
         transition: 'transform 0.15s, box-shadow 0.15s, border-color 0.15s',
         position: 'relative',
         boxShadow: 'var(--card-shadow)',
@@ -174,8 +188,28 @@ export const FileItem: React.FC<FileItemProps> = ({
                   <Share2 size={15} /> Share & Link
                 </button>
 
+                <button
+                  onClick={() => {
+                    onOpenCollaborators?.(item);
+                    setShowMenu(false);
+                  }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.6rem', borderRadius: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'left' }}
+                >
+                  <Users size={15} /> Collaborators
+                </button>
+
                 {!isFolder && (
                   <>
+                    <button
+                      onClick={() => {
+                        onRename?.(data.id);
+                        setShowMenu(false);
+                      }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.6rem', borderRadius: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'left' }}
+                    >
+                      <Tag size={15} /> Rename
+                    </button>
+
                     <button
                       onClick={() => {
                         onOpenVersions?.(data as DocumentItem);

@@ -70,19 +70,20 @@ export class DocumentController {
     try {
       const { documentId } = req.params;
       const versionId = req.query.versionId as string;
+      const isPreview = req.query.preview === 'true';
 
       const result = await DocumentService.downloadDocument(documentId, versionId);
 
       await ActivityService.log({
         organizationId: req.user?.orgId || '',
         userId: req.user!.userId,
-        action: 'DOWNLOADED',
+        action: isPreview ? 'VIEWED' : 'DOWNLOADED',
         documentId,
         metadata: { versionNumber: result.versionNumber },
       });
 
       res.setHeader('Content-Type', result.mimeType);
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
+      res.setHeader('Content-Disposition', `${isPreview ? 'inline' : 'attachment'}; filename="${encodeURIComponent(result.fileName)}"`);
       return res.send(result.buffer);
     } catch (e: any) {
       return res.status(400).json({ error: e.message });

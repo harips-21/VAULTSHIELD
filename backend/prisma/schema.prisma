@@ -27,6 +27,26 @@ enum ActivityAction {
   DELETED
   RESTORED
   VERSION_RESTORED
+  COLLABORATOR_INVITED
+  INVITATION_ACCEPTED
+  INVITATION_REJECTED
+  PERMISSION_CHANGED
+  ACCESS_REVOKED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  REVOKED
+}
+
+enum NotificationType {
+  COLLABORATION_INVITATION
+  PERMISSION_CHANGED
+  ACCESS_REVOKED
+  INVITATION_RESPONSE
 }
 
 model User {
@@ -47,6 +67,13 @@ model User {
   folderShares      FolderShare[]
   activityLogs      ActivityLog[]
   comments          Comment[]
+  sentInvitations   CollaborationInvitation[] @relation("InvitationSender")
+  receivedInvitations CollaborationInvitation[] @relation("InvitationRecipient")
+  notifications     Notification[]
+  createdDocumentShares DocumentShare[]        @relation("CreatedDocumentShares")
+  createdFolderShares   FolderShare[]          @relation("CreatedFolderShares")
+  revocations           CollaboratorRevocation[]
+  issuedRevocations     CollaboratorRevocation[] @relation("RevocationIssuer")
 
   @@map("users")
 }
@@ -97,6 +124,8 @@ model Folder {
   childFolders Folder[]      @relation("FolderHierarchy")
   documents    Document[]
   shares       FolderShare[]
+  invitations  CollaborationInvitation[]
+  revocations  CollaboratorRevocation[]
   activityLogs ActivityLog[]
 
   @@map("folders")
@@ -124,6 +153,8 @@ model Document {
   shares       DocumentShare[]
   comments     Comment[]
   activityLogs ActivityLog[]
+  revocations  CollaboratorRevocation[]
+  invitations  CollaborationInvitation[]
 
   @@map("documents")
 }
@@ -157,11 +188,15 @@ model DocumentShare {
   shareToken       String?         @unique @map("share_token")
   passwordHash     String?         @map("password_hash")
   expiresAt        DateTime?       @map("expires_at")
+  createdByUserId  String?         @map("created_by_user_id")
   createdAt        DateTime        @default(now()) @map("created_at")
 
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   sharedWith User?    @relation(fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  createdBy  User?    @relation("CreatedDocumentShares", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
+  @@index([sharedWithUserId, documentId])
+  @@index([createdByUserId, documentId])
   @@map("document_shares")
 }
 
@@ -173,12 +208,76 @@ model FolderShare {
   shareToken       String?         @unique @map("share_token")
   passwordHash     String?         @map("password_hash")
   expiresAt        DateTime?       @map("expires_at")
+  createdByUserId  String?         @map("created_by_user_id")
   createdAt        DateTime        @default(now()) @map("created_at")
 
   folder     Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
   sharedWith User?  @relation(fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  createdBy  User?  @relation("CreatedFolderShares", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
+  @@index([sharedWithUserId, folderId])
+  @@index([createdByUserId, folderId])
   @@map("folder_shares")
+}
+
+model CollaborationInvitation {
+  id              String           @id @default(uuid())
+  documentId      String?          @map("document_id")
+  folderId        String?          @map("folder_id")
+  invitedByUserId String           @map("invited_by_user_id")
+  invitedUserId   String           @map("invited_user_id")
+  permission      PermissionLevel
+  status          InvitationStatus @default(PENDING)
+  expiresAt       DateTime         @map("expires_at")
+  respondedAt     DateTime?        @map("responded_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  folder      Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  invitedBy   User      @relation("InvitationSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  invitedUser User      @relation("InvitationRecipient", fields: [invitedUserId], references: [id], onDelete: Cascade)
+
+  @@index([invitedUserId, status, expiresAt])
+  @@index([invitedByUserId, createdAt])
+  @@index([documentId, invitedUserId, status])
+  @@index([folderId, invitedUserId, status])
+  @@map("collaboration_invitations")
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String           @map("user_id")
+  actorId    String?          @map("actor_id")
+  type       NotificationType
+  message    String
+  documentId String?          @map("document_id")
+  folderId   String?          @map("folder_id")
+  readAt     DateTime?        @map("read_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model CollaboratorRevocation {
+  id                String   @id @default(uuid())
+  documentId        String?  @map("document_id")
+  folderId          String?  @map("folder_id")
+  userId            String   @map("user_id")
+  revokedByUserId   String   @map("revoked_by_user_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  document  Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revokedBy User      @relation("RevocationIssuer", fields: [revokedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, userId])
+  @@index([folderId, userId])
+  @@map("collaborator_revocations")
 }
 
 model ActivityLog {

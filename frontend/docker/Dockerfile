@@ -10,6 +10,9 @@ RUN npm run build
 
 FROM nginx:alpine
 
+ENV BACKEND_HOST=backend
+
+COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80

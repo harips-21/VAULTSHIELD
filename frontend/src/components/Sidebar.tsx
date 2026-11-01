@@ -1,16 +1,17 @@
-import { Activity, ChevronDown, ChevronRight, FileText, Folder, FolderOpen, HardDrive, History, Share2, Tag, Trash2 } from 'lucide-react';
+import { Activity, Bell, ChevronDown, ChevronRight, FileText, Folder, FolderOpen, HardDrive, History, Share2, Tag, Trash2, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { Folder as FolderType } from '../types';
 
 interface SidebarProps {
-  currentTab: 'all' | 'shared' | 'trash' | 'activity';
-  onTabChange: (tab: 'all' | 'shared' | 'trash' | 'activity') => void;
+  currentTab: 'all' | 'shared' | 'sharedBy' | 'trash' | 'activity' | 'notifications';
+  onTabChange: (tab: 'all' | 'shared' | 'sharedBy' | 'trash' | 'activity' | 'notifications') => void;
   folders: FolderType[];
   currentFolderId: string | null;
   onSelectFolder: (folderId: string | null) => void;
   selectedTag: string | null;
   onSelectTag: (tag: string | null) => void;
   tagsList: string[];
+  notificationCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -22,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   selectedTag,
   onSelectTag,
   tagsList,
+  notificationCount = 0,
 }) => {
   const [foldersExpanded, setFoldersExpanded] = useState(true);
 
@@ -83,6 +85,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Share2 size={18} />
             <span>Shared With Me</span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('sharedBy')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.6rem 0.75rem',
+              borderRadius: '0.6rem',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              color: currentTab === 'sharedBy' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              background: currentTab === 'sharedBy' ? 'var(--accent-light)' : 'transparent',
+            }}
+          >
+            <Users size={18} />
+            <span>Shared By Me</span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('notifications')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              padding: '0.6rem 0.75rem',
+              borderRadius: '0.6rem',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              color: currentTab === 'notifications' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              background: currentTab === 'notifications' ? 'var(--accent-light)' : 'transparent',
+            }}
+          >
+            <Bell size={18} />
+            <span style={{ flex: 1, textAlign: 'left' }}>Notifications</span>
+            {notificationCount > 0 && (
+              <span style={{ minWidth: 20, padding: '0.1rem 0.35rem', borderRadius: '999px', background: 'var(--accent-primary)', color: '#fff', textAlign: 'center', fontSize: '0.68rem' }}>
+                {notificationCount}
+              </span>
+            )}
           </button>
 
           <button
