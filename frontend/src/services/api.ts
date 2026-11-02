@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
+const apiBaseUrl = configuredApiUrl
+  ? `${configuredApiUrl.startsWith('http') ? configuredApiUrl : `https://${configuredApiUrl}`}${configuredApiUrl.endsWith('/api/v1') ? '' : '/api/v1'}`
+  : '/api/v1';
 
 export const api = axios.create({
   baseURL: apiBaseUrl,
@@ -25,7 +28,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken');
       if (refreshToken) {
         try {
-          const res = await axios.post('/api/v1/auth/refresh', { refreshToken });
+          const res = await axios.post(`${apiBaseUrl}/auth/refresh`, { refreshToken });
           const { accessToken, refreshToken: newRefreshToken } = res.data;
           localStorage.setItem('accessToken', accessToken);
           localStorage.setItem('refreshToken', newRefreshToken);

@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import { env } from './config/env';
+import './config/env';
 import { errorHandler } from './middleware/error.middleware';
 
 import activityRoutes from './routes/activity.routes';
@@ -47,14 +47,20 @@ app.use((req, res, next) => {
 });
 
 app.use(helmet());
-app.use(
-  cors({
-    origin: [env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:5173'],
-    credentials: true,
-  })
-);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''));
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 
 // Health Check
 app.get('/health', (req, res) => {

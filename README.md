@@ -100,6 +100,12 @@ Set the frontend service variable `BACKEND_HOST=backend.railway.internal` (the b
 
 The Railway trial is temporary and the Free plan's monthly credit may not keep all services running. Keep backups of both the database and uploaded files; the trial's small volume is only suitable for a demo.
 
+## Temporary free demo deployment on Render
+
+The root `render.yaml` defines a Render Blueprint for a free static frontend, API, PostgreSQL database, and Key Value instance. Push the repository to GitHub, then in the [Render Dashboard](https://dashboard.render.com/) select **New > Blueprint** and connect this repository's `master` branch. Review and deploy the Blueprint, and enter a unique 64-character hexadecimal `MASTER_ENCRYPTION_KEY` when prompted. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and keep a secure backup; never commit it.
+
+After deployment, the frontend's Render URL is the shareable link. The Render API service is public because Render Free services cannot receive private-network traffic. The free setup is only for a disposable demo: the API filesystem (including encrypted uploaded files) is ephemeral, the free PostgreSQL database expires after 30 days, and free Key Value data is in-memory and may be lost on restart. Free web services also spin down after inactivity. Do not store important or sensitive documents on this demo. Upgrade to paid hosting with persistent storage before real use.
+
 ### Database migrations
 
 For a new database, deploy the committed migrations before starting the backend:
