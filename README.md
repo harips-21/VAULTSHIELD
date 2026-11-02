@@ -1,225 +1,182 @@
-# VaultShield - Secure Document Management & Collaboration Platform
+<div align="center">
 
-VaultShield is an enterprise-grade, secure document management and collaboration platform engineered for individuals and organizations to store, organize, share, and collaborate on files — featuring **AES-256 Envelope Encryption at rest**, **full version history**, **granular RBAC**, **Audit Activity Logging**, and **password/expiry protected share links**.
+# 🛡️ VaultShield
 
----
+### Your documents. Encrypted. Versioned. Shared on *your* terms.
 
-## 🌟 Key Features
+A secure document management & collaboration platform: upload, organise, version and share files inside an encrypted workspace, with role-based access on every action.
 
-1. **Envelope Encryption at Rest (AES-256-GCM)**
-   - Every file version upload generates a cryptographically random 256-bit Data Encryption Key (DEK).
-   - The file payload is encrypted with AES-256-GCM using the DEK and a 12-byte IV.
-   - The DEK is wrapped (encrypted) using a Master Key (KEK) stored securely in environment secrets.
-   - Files are stored on disk / cloud in encrypted binary format. Unencrypted bytes never hit persistent storage.
+![React](https://img.shields.io/badge/React-TypeScript-61DAFB?logo=react&logoColor=white)
+![Node](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![Postgres](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?logo=supabase&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Upstash-DC382D?logo=redis&logoColor=white)
+![Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?logo=vercel&logoColor=white)
+![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=white)
 
-2. **JWT Authentication & Redis Session Control**
-   - Access tokens (short-lived 15m) + Refresh tokens (long-lived 7d) stored in Redis with family rotation detection.
-   - Redis-backed rate limiting on auth and upload endpoints.
+**[🚀 Live Demo](https://YOUR-VERCEL-PRODUCTION-URL.vercel.app)** · **[❤️ API Health](https://vaultshield-6r4w.onrender.com/health)** · **[🐛 Report a Bug](https://github.com/harips-21/VAULTSHIELD/issues)**
 
-3. **Folder & Document Management**
-   - Hierarchical folder tree structure with drag-and-drop move/reorganize.
-   - Upload, download, rename, soft delete (trash), restore, tag filtering, search by name/mime.
-
-4. **Version History & Rollbacks**
-   - Immutable version history snapshots. Every edit/upload creates a version.
-   - View version metadata (author, timestamp, file size, SHA-256 checksum, change summary).
-   - One-click rollback to any historical version.
-
-5. **Granular Access Control & Secure Sharing**
-   - Document/Folder permissions: `OWNER`, `EDITOR`, `VIEWER`.
-   - Shareable public links with optional password protection and expiration dates.
-   - Registered-user invitations, acceptance/rejection, collaborator role management, revocation, and inherited folder access.
-   - Dedicated **Shared With Me**, **Shared By Me**, and collaboration notification views.
-
-6. **Audit Activity Log & Collaboration**
-   - Full audit trail recording all user actions (`VIEWED`, `EDITED`, `SHARED`, `DOWNLOADED`, `DELETED`, `RESTORED`).
-   - Discussion comments and nested replies per document.
+</div>
 
 ---
 
-## 🚀 Tech Stack
-
-- **Frontend:** React 18 + TypeScript + Vite + Custom Glassmorphism CSS Design System
-- **Backend:** Node.js + Express.js + TypeScript
-- **Database:** PostgreSQL (Primary data store) + Prisma ORM
-- **Cache/Queue:** Redis (Token rotation, rate limiting, in-memory fallback)
-- **Encryption:** AES-256-GCM Envelope Encryption (Node `crypto`)
-- **Infra:** Docker + docker-compose (multi-container orchestration)
+> ⏳ **Heads-up:** the backend runs on Render's free tier and sleeps after ~15 minutes of inactivity. The **first request can take 50 seconds or more**. Open the [health link](https://vaultshield-6r4w.onrender.com/health) first to wake it up, then log in.
 
 ---
 
-## 🛠️ Quick Start with Docker Compose
+## ✨ What is VaultShield?
 
-To bring up the full platform (Frontend, Backend, PostgreSQL, Redis) with a single command:
+Most file-sharing tools treat security as an add-on. VaultShield flips that: **every file is encrypted at rest, every action is permission-checked, and every change is recorded.** Create a workspace for your organisation, invite your team, and collaborate without losing control of who sees what.
 
-```bash
-# 1. Navigate to the repository root
-cd C:\VAULTSHIELD
+## 🔑 Features
 
-# 2. Copy the environment template and set unique secrets
-Copy-Item .env.example .env
-# Run this four times. Paste each output into POSTGRES_PASSWORD, JWT_SECRET,
-# JWT_REFRESH_SECRET, and MASTER_ENCRYPTION_KEY, respectively.
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-# For manual backend development, also update DATABASE_URL with POSTGRES_PASSWORD.
-# Never reuse the JWT keys or encryption key across environments.
+| | Feature | What it does |
+|---|---|---|
+| 🔐 | **Secure auth** | JWT access and refresh tokens, hashed passwords |
+| 🏢 | **Workspaces** | Register with an organisation or workspace name, so users belong to an org |
+| 📁 | **Documents and folders** | Upload, download, rename, delete (soft delete with restore) and nested folders |
+| 🧬 | **AES-256 encryption at rest** | Envelope encryption: each file gets its own key, wrapped by a master key |
+| 🕰️ | **Version history** | Every edit creates a new version, and any version can be restored |
+| 👥 | **Roles (RBAC)** | Owner / Editor / Viewer permissions per document and folder |
+| 🔗 | **Secure share links** | Links with expiry date and password protection |
+| 🔎 | **Search and filters** | By name, tag, owner, type or date |
+| 📜 | **Activity log** | View, edit, share, download and delete events per document |
+| 🌗 | **Responsive UI** | File-explorer layout with light/dark mode |
 
-# 3. Spin up services using Docker Compose
-docker compose up --build
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    U([👤 User]) --> FE["⚛️ React + TypeScript<br/>Vercel"]
+    FE -->|"REST /api/v1"| API["🟢 Node + Express API<br/>Render"]
+    API --> AUTH{"🔐 JWT + RBAC"}
+    AUTH --> SVC["⚙️ Services"]
+    SVC --> DB[("🐘 PostgreSQL<br/>Supabase")]
+    SVC --> RD[("⚡ Redis<br/>Upstash")]
+    SVC --> ENC["🧬 AES-256 layer"] --> FS[("🗄️ Encrypted files")]
 ```
 
-Access the Web Application in your browser:
-- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
-- **Backend REST API:** [http://localhost:5000/api/v1](http://localhost:5000/api/v1)
+**Request flow:** `Route → JWT middleware → RBAC check → Validation → Controller → Service → DB`
 
-## Temporary demo deployment on Railway
+## 🧰 Tech Stack
 
-Railway's free trial is suitable for a short-lived demo, not reliable always-on hosting. It currently includes a one-time $5 usage grant for up to 30 days, then reverts to the Free plan with $1 of monthly usage credit. Free/Trial volumes are limited to 0.5 GB. Check [Railway's current plan limits](https://docs.railway.com/pricing/plans) before deploying.
+| Layer | Technology |
+|---|---|
+| Frontend | React, TypeScript, Axios, zod |
+| Backend | Node.js, Express.js (strict TypeScript) |
+| ORM / Migrations | Prisma |
+| Database | PostgreSQL (Supabase, session pooler) |
+| Cache / Sessions | Redis (Upstash) |
+| Security | JWT, password hashing, AES-256 |
+| Local dev | Docker + docker-compose |
+| Hosting | Vercel (frontend), Render (backend) |
 
-Push this repository to GitHub, then create a Railway project from that repository. Do not commit `.env` files or deployment secrets.
+## 🌍 Deployment Map
 
-Create these four services in the same Railway project/environment:
+| Service | Platform | Role |
+|---|---|---|
+| Frontend | **Vercel** | Serves the React app |
+| Backend | **Render** (free) | Express API at `/api/v1` |
+| Database | **Supabase** | Managed PostgreSQL |
+| Redis | **Upstash** | Sessions, caching, rate limits |
 
-1. **PostgreSQL** and **Redis** using Railway's database services.
-2. **Backend** from the GitHub repository. Set its root directory to `/backend` and Dockerfile path to `docker/Dockerfile`. Leave the start command as the Dockerfile default.
-3. **Frontend** from the same GitHub repository. Set its root directory to `/frontend` and Dockerfile path to `docker/Dockerfile`.
+## 🔌 API Overview
 
-Configure the backend service with:
+Base URL: `https://vaultshield-6r4w.onrender.com/api/v1`
 
-- `NODE_ENV=production`
-- `PORT=5000`
-- `DATABASE_URL=${{Postgres.DATABASE_URL}}`
-- `REDIS_URL=${{Redis.REDIS_URL}}`
-- `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `MASTER_ENCRYPTION_KEY`, each set to a different unique 64-character hexadecimal secret. Generate each with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`; enter them directly in Railway, not in source control.
-- `STORAGE_DIR=/data/encrypted`
-- `CLIENT_URL` set to the frontend's HTTPS Railway domain (set this after generating the domain below).
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/register` | No | Create an account and workspace |
+| POST | `/auth/login` | No | Log in and receive tokens |
+| POST | `/documents` | Yes | Upload a document |
+| GET | `/documents/:id/versions` | Yes | List version history |
+| POST | `/documents/:id/restore/:versionId` | Editor+ | Restore a version |
+| POST | `/documents/:id/share` | Owner | Create an expiring, password-protected link |
+| GET | `/activity/:docId` | Yes | Activity log for a document |
 
-Attach a Railway volume to the backend at `/data` so uploaded encrypted files survive redeployments. Set the backend's pre-deploy command to `npx prisma migrate deploy` to apply database migrations.
+Health check: `GET /health` returns `{"status":"ok", ...}`
 
-Set the frontend service variable `BACKEND_HOST=backend.railway.internal` (the backend service must be named `backend`). Generate a public domain for the frontend and set its target port to `80`. The Nginx frontend serves the site and proxies `/api/` requests to the private backend, so do not generate a public backend domain. After the frontend domain is available, copy its HTTPS URL into the backend's `CLIENT_URL` and redeploy the backend.
+## 🚀 Run It Locally
 
-The Railway trial is temporary and the Free plan's monthly credit may not keep all services running. Keep backups of both the database and uploaded files; the trial's small volume is only suitable for a demo.
-
-## Temporary free demo deployment on Render
-
-The root `render.yaml` defines a Render Blueprint for a free static frontend, API, PostgreSQL database, and Key Value instance. Push the repository to GitHub, then in the [Render Dashboard](https://dashboard.render.com/) select **New > Blueprint** and connect this repository's `master` branch. Review and deploy the Blueprint, and enter a unique 64-character hexadecimal `MASTER_ENCRYPTION_KEY` when prompted. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and keep a secure backup; never commit it.
-
-After deployment, the frontend's Render URL is the shareable link. The Render API service is public because Render Free services cannot receive private-network traffic. The free setup is only for a disposable demo: the API filesystem (including encrypted uploaded files) is ephemeral, the free PostgreSQL database expires after 30 days, and free Key Value data is in-memory and may be lost on restart. Free web services also spin down after inactivity. Do not store important or sensitive documents on this demo. Upgrade to paid hosting with persistent storage before real use.
-
-### Database migrations
-
-For a new database, deploy the committed migrations before starting the backend:
-
-```bash
-cd backend
-npx prisma migrate deploy
-```
-
-This repository now has an initial baseline migration followed by the collaboration migration. If upgrading a database that already has the original schema but no Prisma migration history, mark the baseline as applied and then deploy:
+**Prerequisites:** Node.js 18+, Docker (or a local PostgreSQL and Redis), Git
 
 ```bash
+# 1. Clone
+git clone https://github.com/harips-21/VAULTSHIELD.git
+cd VAULTSHIELD
+
+# 2. Backend
 cd backend
-npx prisma migrate resolve --applied 20261026000000_initial_schema
-npx prisma migrate deploy
-```
-
-If the database has already been synchronized to the current Prisma schema with `prisma db push`, mark both migrations as applied instead of replaying their SQL:
-
-```bash
-cd backend
-npx prisma migrate resolve --applied 20261026000000_initial_schema
-npx prisma migrate resolve --applied 20261026230000_collaboration_module
-```
-
-### Collaboration API
-
-All endpoints require a valid access token except the existing public share-link access route. Collaborator management endpoints are scoped to the resource and enforce owner/admin authorization on the backend.
-
-- `GET/POST /api/v1/shares/document/:documentId/collaborators`
-- `PATCH/DELETE /api/v1/shares/document/:documentId/collaborators/:shareId`
-- `GET/POST /api/v1/shares/folder/:folderId/collaborators`
-- `PATCH/DELETE /api/v1/shares/folder/:folderId/collaborators/:shareId`
-- `GET /api/v1/shares/invitations`
-- `POST /api/v1/shares/invitations/:invitationId/respond` (`accept` or `reject`)
-- `DELETE /api/v1/shares/invitations/:invitationId` (cancel a pending invitation)
-- `GET /api/v1/shares/documents/shared-with-me`
-- `GET /api/v1/shares/documents/shared-by-me`
-- `GET /api/v1/shares/notifications`
-- `PATCH /api/v1/shares/notifications/:notificationId/read`
-
----
-
-## 💻 Manual Local Development Setup
-
-### 1. Backend Setup
-
-```bash
-cd backend
-
-# Install dependencies
 npm install
-
-# Run database migrations (Ensure PostgreSQL is running locally or via Docker)
-npx prisma migrate dev
-
-# Run unit tests (Auth, Encryption, Versioning)
-npm test
-
-# Start backend dev server
+cp .env.example .env        # fill in your own values
+npx prisma migrate deploy   # create the tables
 npm run dev
-```
 
-### 2. Frontend Setup
-
-```bash
+# 3. Frontend (new terminal)
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start Vite dev server
 npm run dev
 ```
 
+> If your folders are named differently, adjust the `cd` commands.
+
+### 🔧 Environment Variables
+
+Never commit real values. Keep `.env` in `.gitignore`.
+
+**Backend (Render or local `.env`)**
+
+| Variable | Example / Notes |
+|---|---|
+| `DATABASE_URL` | `postgresql://postgres.<project-ref>:<PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres` (Supabase **session pooler**, because Render's free tier has no IPv6) |
+| `REDIS_URL` | `rediss://...` from Upstash |
+| `CLIENT_URL` | Frontend origin(s), comma-separated, no trailing `/` |
+| JWT secrets | Long random strings, one per token type (see `.env.example`) |
+| Encryption master key | Used to wrap per-file keys (see `.env.example`) |
+
+**Frontend (Vercel)**
+
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | `https://vaultshield-6r4w.onrender.com/api/v1` |
+
+> Vite bakes env vars in at build time, so **redeploy** the frontend after changing `VITE_API_URL`.
+
+## ☁️ Deploy Your Own
+
+1. **Supabase:** create a project and copy the **Session pooler** connection string.
+2. **Upstash:** create a Redis database and copy the `rediss://` URL.
+3. **Render:** new Web Service from this repo. Build command: `npm install && npx prisma generate && npx prisma migrate deploy && npm run build`. Set the backend env vars above.
+4. **Vercel:** import the repo, set `VITE_API_URL`, then deploy.
+5. Add your Vercel URL to `CLIENT_URL` on Render so CORS allows it.
+
+## 🧗 Challenges and Lessons
+
+- **Per-file key design:** solved with envelope encryption (a key per file, wrapped by a master key).
+- **Redis and PostgreSQL consistency:** careful cache invalidation so cached metadata matches the source of truth.
+- **RBAC cascading:** folder-level roles resolve down to nested documents.
+- **Going live:** CORS allow-lists, API base-path mismatches (`/api/v1`), IPv6-free pooler connections and running Prisma migrations against a hosted database.
+
+## 🗺️ Roadmap
+
+- [ ] Sharing UI polish (expiry and password flow)
+- [ ] Final dashboard responsiveness pass
+- [ ] More unit and integration test coverage
+- [ ] Persistent object storage (Render's free disk is temporary)
+
+## ⚠️ Demo Notes
+
+- Free-tier storage is **ephemeral**, so uploaded files may disappear after a restart. **Please don't upload confidential documents to the demo.**
+- Supabase free projects pause after 7 days of inactivity.
+
+## 👩‍💻 Author
+
+**Haripriya J** · B.E. Computer Science and Engineering, SRM Easwari Engineering College
+🐙 [GitHub: harips-21](https://github.com/harips-21)
+
 ---
 
-## 🔐 Envelope Encryption Architecture
+<div align="center">
 
-```
-                       [ RAW FILE UPLOAD ]
-                                |
-                   Generate Random 256-bit DEK
-                                |
-             +------------------+------------------+
-             |                                     |
-    Encrypt File Payload                  Wrap DEK with Master KEK
-   (AES-256-GCM + File IV)                 (AES-256-GCM + DEK IV)
-             |                                     |
-    [ Encrypted Buffer ]                  [ Wrapped DEK String ]
-             \                                     /
-              +-----------------+-----------------+
-                                |
-                    Save Payload to Storage
-                 Save Metadata & Wrapped DEK to DB
-```
+⭐ If you found this useful, give the repo a star!
 
-When downloading, the process is reversed:
-1. Fetch wrapped DEK & GCM Auth Tag from `DOCUMENT_VERSIONS` table.
-2. Unwrap DEK using `MASTER_ENCRYPTION_KEY` (KEK).
-3. Decrypt the file stream in-memory using DEK.
-4. Stream decrypted bytes to authorized user browser.
-
----
-
-## 🧪 Unit Tests
-
-Run backend service unit tests:
-
-```bash
-cd backend
-npm test
-```
-Tests verify:
-- Envelope Encryption payload symmetry and tampering detection.
-- AuthService JWT token generation & registration.
-- VersionService history formatting and rollbacks.
+</div>
